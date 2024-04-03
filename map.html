@@ -1,0 +1,248 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>Crime map in Brooklyn, NYC</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <script src="https://api.tiles.mapbox.com/mapbox-gl-js/v3.1.0/mapbox-gl.js"></script>
+    <link
+      href="https://api.tiles.mapbox.com/mapbox-gl-js/v3.1.0/mapbox-gl.css"
+      rel="stylesheet"
+    />
+    <style>
+      body {
+        margin: 0;
+        padding: 0;
+        font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
+      }
+
+      #map {
+        position: absolute;
+        top: 0;
+        bottom: 0;
+        width: 100%;
+      }
+
+      h1 {
+        font-size: 20px;
+        line-height: 30px;
+      }
+
+      h2 {
+        font-size: 14px;
+        line-height: 20px;
+        margin-bottom: 10px;
+      }
+
+      a {
+        text-decoration: none;
+        color: #2dc4b2;
+      }
+
+      #console {
+        position: absolute;
+        margin: 10px;
+        width: 240px;
+        background-color: white;
+        padding: 10px 20px;
+      }
+
+      .session {
+        margin-bottom: 20px;
+      }
+
+      .row {
+        height: 12px;
+        width: 100%;
+      }
+
+      .colors {
+        background: linear-gradient(
+          to right,
+          #2dc4b2,
+          #3bb3c3,
+          #669ec4,
+          #8b88b6,
+          #a2719b,
+          #aa5e79
+        );
+        margin-bottom: 5px;
+      }
+
+      .label {
+        width: 15%;
+        display: inline-block;
+        text-align: center;
+      }
+
+      .landuse-legend {
+        margin-top: 10px;
+        background-color: white;
+        padding: 10px;
+        border-radius: 5px;
+        box-shadow: 0 0 10px rgba(0,0,0,0.2);
+      }
+
+      .landuse-legend h2 {
+        margin-bottom: 10px;
+      }
+
+      .legend-item {
+        display: flex;
+        align-items: center;
+        margin-bottom: 5px;
+      }
+
+      .legend-color {
+        width: 20px;
+        height: 20px;
+        margin-right: 5px;
+        border: 1px solid #333;
+      }
+    </style>
+  </head>
+
+  <body>
+    <div id="map"></div>
+    <div id="console">
+      <h1>Crime map in Brooklyn</h1>
+      <p>
+        Data:
+        <a
+          href="https://da"
+          >Crime dataset</a
+        >
+        in NYC
+      </p>
+      <!-- <div class="session">
+        <h2>Casualty</h2>
+        <div class="row colors"></div>
+        <div class="row labels">
+          <div class="label">0</div>
+          <div class="label">1</div>
+          <div class="label">2</div>
+          <div class="label">3</div>
+          <div class="label">4</div>
+          <div class="label">5+</div>
+        </div>
+      </div> -->
+      <div class="session">
+        <h2>Month:<label id="active-month"></label></h2>
+        <input
+          id="slider"
+          class="row"
+          type="range"
+          min="1"
+          max="12"
+          step="1"
+          value="12"
+        />
+      </div>
+
+      <!-- land use-->
+     <div class="landuse-legend">
+       <h2>Land Use Types</h2>
+       <div class="legend-item">
+       <span class="legend-color" style="background-color: #569405;"></span> Park
+       </div>
+       <div class="legend-item">
+       <span class="legend-color" style="background-color: #fd303a;"></span> Commercial
+       </div>
+       <div class="legend-item">
+       <span class="legend-color" style="background-color: #fdfab0;"></span> Tower Apartment
+       </div>
+       <div class="legend-item">
+        <span class="legend-color" style="background-color: #fdd0af;"></span> Mid-rise Apartment
+        </div>
+       <div class="legend-item">
+        <span class="legend-color" style="background-color: #f5743d;"></span> Semi-detach
+        </div>
+       <div class="legend-item">
+        <span class="legend-color" style="background-color: #fb3c3c;"></span> Single-family detach
+        </div>
+        <div class="legend-item">
+        <span class="legend-color" style="background-color: #c983fb;"></span> Manufacturing
+        </div>
+        <div class="legend-item">
+        <span class="legend-color" style="background-color: #b4a7a7;"></span> Battery park city
+        </div>
+    </div>
+
+      <!-- <div class="session">
+        <h2>Month of the year</h2>
+        <div class="row" id="filters">
+          <input
+            id="all"
+            type="radio"
+            name="toggle"
+            value="all"
+            checked="checked"
+          />
+          <label for="all">All</label>
+          <input id="2023" type="radio" name="toggle" value="2023" />
+          <label for="2023">2023</label>
+          <input id="2024" type="radio" name="toggle" value="2024" />
+          <label for="2024">2024</label>
+        </div>
+      </div>
+    </div> -->
+
+    <script>
+      mapboxgl.accessToken = 'pk.eyJ1Ijoia2VpbW9kaSIsImEiOiJjbHMxN2h5Y3EwOG9kMmxtdDZsMTMyZ2p6In0.IQwGswv3WAOl06WclkOCKg';
+      const map = new mapboxgl.Map({
+        container: 'map',
+        style: 'mapbox://styles/chenchenw/clu55mwag008e01pificw4fe0',
+        center: [-73.94930, 40.66226],
+        zoom: 11
+      });
+
+      map.on('load', () => {
+        let filterHour = ['==', ['number', ['get', 'Month']], 12];
+        // let filterDay = ['!=', ['string', ['get', 'Day']], 'placeholder'];
+
+        map.addLayer({
+          id: 'crime',
+          type: 'circle',
+          source: {
+            type: 'geojson',
+            data: './Crime_map.geojson' // replace this with the url of your own geojson
+          },
+          paint: {
+            'circle-radius': 3.5, // 或其他固定值
+            'circle-color': '#000000', // 或其他固定颜色值
+            'circle-opacity': ['interpolate',['linear'],['number', ['get', 'Month']], // 从'Month'字段获取数值
+            1, 1, // 1月对应透明度0.1
+            2, 1,
+            3, 1,
+            4, 1,
+            5, 1,
+            6, 1,
+            7, 1,
+            8, 1,
+            9, 1,
+            10, 1,
+            11, 1, 
+            12, 1  // 12月对应透明度1.0
+        ]
+          }});
+
+        // update hour filter when the slider is dragged
+        document.getElementById('slider').addEventListener('input', (event) => {
+        const monthIndex = parseInt(event.target.value);
+        // 数组存储月份名称
+        const monthNames = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
+
+        // 根据滑块的值得到对应的月份名称，注意月份值要减1
+        const monthName = monthNames[monthIndex - 1];
+
+        // 更新地图
+        filtermonth = ['==', ['number', ['get', 'Month']], monthIndex];
+        map.setFilter('crime', ['all', filtermonth]);
+
+        // 更新 UI 上的文本显示为月份名称
+       document.getElementById('active-month').innerText = monthName;
+       })
+      });
+    </script>
+  </body>
+</html>
